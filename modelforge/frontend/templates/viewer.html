@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Model Viewer</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: #020617;
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 600px;
+        }
+
+        .label {
+            color: #94a3b8;
+        }
+
+        pre {
+            background: #020617;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Model Viewer</h1>
+
+<div class="card">
+    <p><span class="label">Model ID:</span> <span id="model-id">Loading…</span></p>
+    <p><span class="label">Name:</span> <span id="model-name">Loading…</span></p>
+    <p><span class="label">Type:</span> <span id="model-type">Loading…</span></p>
+
+    <h3>Dimensions</h3>
+    <ul>
+        <li>Width: <span id="dim-width">–</span></li>
+        <li>Height: <span id="dim-height">–</span></li>
+        <li>Depth: <span id="dim-depth">–</span></li>
+    </ul>
+
+    <h3>Raw JSON</h3>
+    <pre id="raw-json">Loading…</pre>
+</div>
+
+<!-- Safely inject model_id from Django -->
+{{ model_id|json_script:"model-id-data" }}
+
+<div id="viewer3d"
+     style="width: 600px; height: 400px; background:#020617; margin-top:20px;">
+</div>
+
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+<script>
+    const MODEL_ID = JSON.parse(
+        document.getElementById("model-id-data").textContent
+    );
+
+    const API_URL = `/api/models/${MODEL_ID}/`;
+
+    async function loadModel() {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+
+        // ----- BASIC UI -----
+        document.getElementById("model-id").textContent = data.id;
+        document.getElementById("model-name").textContent = data.name;
+        document.getElementById("model-type").textContent = data.type;
+
+        document.getElementById("dim-width").textContent = data.dimensions.width;
+        document.getElementById("dim-height").textContent = data.dimensions.height;
+        document.getElementById("dim-depth").textContent = data.dimensions.depth;
+
+        document.getElementById("raw-json").textContent =
+            JSON.stringify(data, null, 2);
+
+        // ----- THREE.JS -----
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020617);
+
+        const camera = new THREE.PerspectiveCamera(
+            45,
+            600 / 400,
+            0.1,
+            1000
+        );
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(600, 400);
+        document.getElementById("viewer3d").appendChild(renderer.domElement);
+
+        // Lights
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+        // Geometry from API dimensions
+        const geometry = new THREE.BoxGeometry(
+            data.dimensions.width,
+            data.dimensions.height,
+            data.dimensions.depth
+        );
+
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8
+        });
+
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        camera.position.z = 5;
+
+        // Animate
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.y += 0.01;
+            cube.rotation.x += 0.005;
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    }
+
+    loadModel();
+</script>
+
+
+</body>
+</html>
