@@ -1,290 +1,262 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Model Viewer</title>
+<title>Advanced Model Viewer</title>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #e5e7eb;
-    margin: 0;
-    padding: 20px;
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0f172a;
+    color:#e2e8f0;
 }
 
-h1 {
-    margin-bottom: 20px;
+h1{padding:15px;}
+
+.main{
+    display:flex;
+    gap:20px;
+    padding:20px;
 }
 
-.main-container {
-    display: flex;
-    gap: 20px;
+#viewer3d{
+    width:700px;
+    height:500px;
+    background:#020617;
+    border-radius:10px;
 }
 
-.card {
-    background: #020617;
-    border-radius: 8px;
-    padding: 16px;
-    width: 350px;
+.panel{
+    width:300px;
+    background:#020617;
+    padding:15px;
+    border-radius:10px;
 }
 
-.label {
-    color: #94a3b8;
+.panel h3{margin-top:10px;}
+
+.panel input, .panel button{
+    width:100%;
+    margin-bottom:8px;
 }
 
-pre {
-    background: #020617;
-    padding: 12px;
-    border-radius: 6px;
-    overflow-x: auto;
+button{
+    padding:8px;
+    background:#1e293b;
+    border:none;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
 }
 
-.viewer-section {
-    display: flex;
-    gap: 20px;
-}
-
-#viewer3d {
-    width: 600px;
-    height: 400px;
-    background: #020617;
-    border-radius: 8px;
-}
-
-.control-panel {
-    width: 260px;
-    background: #020617;
-    padding: 15px;
-    border-radius: 8px;
-}
-
-.control-group {
-    margin-bottom: 15px;
-}
-
-.control-group label {
-    font-size: 14px;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.control-group input[type="range"],
-.control-group input[type="color"] {
-    width: 100%;
-}
-
-button {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 8px;
-    background: #1e293b;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #334155;
+button:hover{
+    background:#334155;
 }
 </style>
 </head>
+
 <body>
 
-<h1>Model Viewer</h1>
+<h1>Advanced Model Viewer</h1>
 
-<div class="main-container">
+<div class="main">
 
-    <div class="card">
-        <p><span class="label">Model ID:</span> <span id="model-id">Loading…</span></p>
-        <p><span class="label">Name:</span> <span id="model-name">Loading…</span></p>
-        <p><span class="label">Type:</span> <span id="model-type">Loading…</span></p>
+<div id="viewer3d"></div>
 
-        <h3>Dimensions</h3>
-        <ul>
-            <li>Width: <span id="dim-width">–</span></li>
-            <li>Height: <span id="dim-height">–</span></li>
-            <li>Depth: <span id="dim-depth">–</span></li>
-        </ul>
+<div class="panel">
 
-        <h3>Raw JSON</h3>
-        <pre id="raw-json">Loading…</pre>
-    </div>
+<h3>Appearance</h3>
+<input type="color" id="colorPicker" value="#38bdf8">
+<label><input type="checkbox" id="wireframeToggle"> Wireframe</label>
+Metalness <input type="range" id="metalSlider" min="0" max="1" step="0.01" value="0.5">
+Roughness <input type="range" id="roughSlider" min="0" max="1" step="0.01" value="0.3">
+Light <input type="range" id="lightSlider" min="0" max="5" step="0.1" value="2">
 
-    <div class="viewer-section">
+<h3>Helpers</h3>
+<button id="gridBtn">Toggle Grid</button>
+<button id="axisBtn">Toggle Axis</button>
 
-        <div id="viewer3d"></div>
+<h3>Transform</h3>
+Scale <input type="range" id="scaleSlider" min="0.1" max="3" step="0.1" value="1">
 
-        <div class="control-panel">
+Rotate X <input type="range" id="rotX" min="0" max="360" value="0">
+Rotate Y <input type="range" id="rotY" min="0" max="360" value="0">
+Rotate Z <input type="range" id="rotZ" min="0" max="360" value="0">
 
-            <h3>Controls</h3>
+Position X <input type="range" id="posX" min="-10" max="10" step="0.1" value="0">
+Position Y <input type="range" id="posY" min="-10" max="10" step="0.1" value="0">
+Position Z <input type="range" id="posZ" min="-10" max="10" step="0.1" value="0">
 
-            <div class="control-group">
-                <label>Model Color</label>
-                <input type="color" id="colorPicker" value="#38bdf8">
-            </div>
+<h3>Animation</h3>
+<button id="autoRotateBtn">Auto Rotate: ON</button>
 
-            <div class="control-group">
-                <label>
-                    <input type="checkbox" id="wireframeToggle">
-                    Wireframe Mode
-                </label>
-            </div>
+<h3>Export</h3>
+<button id="screenshotBtn">Take Screenshot</button>
 
-            <div class="control-group">
-                <label>Metalness</label>
-                <input type="range" id="metalSlider" min="0" max="1" step="0.01" value="0.7">
-            </div>
+<div id="angleDisplay" style="margin-top:10px;"></div>
 
-            <div class="control-group">
-                <label>Roughness</label>
-                <input type="range" id="roughSlider" min="0" max="1" step="0.01" value="0.2">
-            </div>
-
-            <div class="control-group">
-                <label>Light Intensity</label>
-                <input type="range" id="lightSlider" min="0" max="5" step="0.1" value="2">
-            </div>
-
-            <h3>Camera Views</h3>
-
-            <button id="camFront">Front</button>
-            <button id="camTop">Top</button>
-            <button id="camSide">Side</button>
-            <button id="camReset">Reset</button>
-
-        </div>
-
-    </div>
-
+</div>
 </div>
 
 {{ model_id|json_script:"model-id-data" }}
 
 <script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
   }
-}
 </script>
-
 <script type="module">
-
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import * as THREE from "{% static 'three/three.module.js' %}";
+import { OrbitControls } from "{% static 'three/OrbitControls.js' %}";
 
 const MODEL_ID = JSON.parse(document.getElementById("model-id-data").textContent);
 const API_URL = `/api/models/${MODEL_ID}/`;
 
 async function loadModel() {
 
-const response = await fetch(API_URL);
-const data = await response.json();
+    const response = await fetch(API_URL);
+    const data = await response.json();
 
-document.getElementById("model-id").textContent = data.id;
-document.getElementById("model-name").textContent = data.name;
-document.getElementById("model-type").textContent = data.type;
-document.getElementById("dim-width").textContent = data.dimensions.width;
-document.getElementById("dim-height").textContent = data.dimensions.height;
-document.getElementById("dim-depth").textContent = data.dimensions.depth;
-document.getElementById("raw-json").textContent = JSON.stringify(data, null, 2);
+    const container = document.getElementById("viewer3d");
 
-const scene = new THREE.Scene();
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(600, 400);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-
-document.getElementById("viewer3d").appendChild(renderer.domElement);
-
-const camera = new THREE.PerspectiveCamera(45, 600/400, 0.1, 1000);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-new RGBELoader()
-.setPath('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/')
-.load('studio_small_09_1k.hdr', (texture)=>{
-    const envMap = pmrem.fromEquirectangular(texture).texture;
-    scene.environment = envMap;
+    const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
-    texture.dispose();
-    pmrem.dispose();
-});
 
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(5,10,5);
-light.castShadow = true;
-scene.add(light);
-scene.add(new THREE.AmbientLight(0xffffff,0.3));
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
 
-let geometry;
-if(data.type.toLowerCase()==="sphere"){
-    geometry = new THREE.SphereGeometry(data.dimensions.width/2,32,32);
-}else if(data.type.toLowerCase()==="cube"){
-    geometry = new THREE.BoxGeometry(data.dimensions.width,data.dimensions.height,data.dimensions.depth);
-}else{
-    geometry = new THREE.CylinderGeometry(data.dimensions.width/2,data.dimensions.width/2,data.dimensions.height,32);
-}
+    const camera = new THREE.PerspectiveCamera(
+        45,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        2000
+    );
 
-const material = new THREE.MeshStandardMaterial({
-    color:0x38bdf8,
-    metalness:0.7,
-    roughness:0.2
-});
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
 
-const mesh = new THREE.Mesh(geometry,material);
-mesh.castShadow=true;
-mesh.receiveShadow=true;
-scene.add(mesh);
+    const light = new THREE.DirectionalLight(0xffffff,2);
+    light.position.set(10,15,10);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0xffffff,0.4));
 
-const box = new THREE.Box3().setFromObject(mesh);
-const size = box.getSize(new THREE.Vector3());
-mesh.position.y -= size.y/2;
+    // Create geometry based on type
+    let geometry;
+    if(data.type.toLowerCase() === "sphere") {
+        geometry = new THREE.SphereGeometry(data.dimensions.width/2,32,32);
+    } else if(data.type.toLowerCase() === "cube") {
+        geometry = new THREE.BoxGeometry(
+            data.dimensions.width,
+            data.dimensions.height,
+            data.dimensions.depth
+        );
+    } else {
+        geometry = new THREE.CylinderGeometry(
+            data.dimensions.width/2,
+            data.dimensions.width/2,
+            data.dimensions.height,
+            32
+        );
+    }
 
-camera.position.set(0,size.y, size.y*2);
-controls.target.set(0,0,0);
-controls.update();
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        metalness: 0.5,
+        roughness: 0.3
+    });
 
-const floor = new THREE.Mesh(
-new THREE.PlaneGeometry(50,50),
-new THREE.MeshStandardMaterial({color:0x111827})
-);
-floor.rotation.x=-Math.PI/2;
-floor.receiveShadow=true;
-scene.add(floor);
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
 
-/* CONTROLS */
-colorPicker.oninput = e=> material.color.set(e.target.value);
-wireframeToggle.onchange = e=> material.wireframe=e.target.checked;
-metalSlider.oninput = e=> material.metalness=e.target.value;
-roughSlider.oninput = e=> material.roughness=e.target.value;
-lightSlider.oninput = e=> light.intensity=e.target.value;
+    // Auto center + fit
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    mesh.position.sub(center);
 
-/* CAMERA BUTTONS */
-camFront.onclick = ()=> camera.position.set(0,size.y, size.y*2);
-camTop.onclick = ()=> camera.position.set(0,size.y*3,0);
-camSide.onclick = ()=> camera.position.set(size.y*3,size.y,0);
-camReset.onclick = ()=> camera.position.set(0,size.y, size.y*2);
+    // Camera setup with dynamic near/far planes
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(0, maxDim, maxDim*2);
+    camera.near = maxDim / 100;
+    camera.far = maxDim * 100;
+    camera.updateProjectionMatrix();
 
-function animate(){
-requestAnimationFrame(animate);
-controls.update();
-renderer.render(scene,camera);
-}
-animate();
+    // OrbitControls limits
+    controls.target.set(0,0,0);
+    controls.update();
+    controls.minDistance = maxDim / 10;
+    controls.maxDistance = maxDim * 10;
 
+    // Helpers
+    const grid = new THREE.GridHelper(50,50);
+    scene.add(grid);
+    const axes = new THREE.AxesHelper(5);
+    scene.add(axes);
+
+    // UI Controls
+    colorPicker.oninput = e => material.color.set(e.target.value);
+    wireframeToggle.onchange = e => material.wireframe = e.target.checked;
+    metalSlider.oninput = e => material.metalness = e.target.value;
+    roughSlider.oninput = e => material.roughness = e.target.value;
+    lightSlider.oninput = e => light.intensity = e.target.value;
+
+    gridBtn.onclick = () => grid.visible = !grid.visible;
+    axisBtn.onclick = () => axes.visible = !axes.visible;
+
+    scaleSlider.oninput = e => mesh.scale.set(e.target.value,e.target.value,e.target.value);
+    rotX.oninput = e => mesh.rotation.x = THREE.MathUtils.degToRad(e.target.value);
+    rotY.oninput = e => mesh.rotation.y = THREE.MathUtils.degToRad(e.target.value);
+    rotZ.oninput = e => mesh.rotation.z = THREE.MathUtils.degToRad(e.target.value);
+    posX.oninput = e => mesh.position.x = e.target.value;
+    posY.oninput = e => mesh.position.y = e.target.value;
+    posZ.oninput = e => mesh.position.z = e.target.value;
+
+    // Auto rotate
+    let autoRotate = true;
+    autoRotateBtn.onclick = () => {
+        autoRotate = !autoRotate;
+        autoRotateBtn.innerText = autoRotate ? "Auto Rotate: ON" : "Auto Rotate: OFF";
+    };
+
+    // Screenshot
+    screenshotBtn.onclick = () => {
+        renderer.render(scene, camera);
+        const link = document.createElement("a");
+        link.download = "model.png";
+        link.href = renderer.domElement.toDataURL();
+        link.click();
+    };
+
+    // Responsive
+    window.addEventListener("resize", () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Animation
+    function animate() {
+        requestAnimationFrame(animate);
+        if(autoRotate) mesh.rotation.y += 0.01;
+
+        const degX = THREE.MathUtils.radToDeg(mesh.rotation.x).toFixed(1);
+        const degY = THREE.MathUtils.radToDeg(mesh.rotation.y).toFixed(1);
+        const degZ = THREE.MathUtils.radToDeg(mesh.rotation.z).toFixed(1);
+
+        angleDisplay.innerHTML = `Rotation → X:${degX}° Y:${degY}° Z:${degZ}°`;
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
 }
 
 loadModel();
-
 </script>
-
-</body>
-</html>
