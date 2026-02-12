@@ -53,3 +53,21 @@ def model_detail_api(request, model_id):
 def model_viewer(request, model_id):
     return render(request, "viewer.html", {"model_id": model_id})
 
+# views.py
+from django.http import JsonResponse
+
+# Simple template-based approach
+OBJECTS = {
+    "apple": {"type": "sphere", "color": "red", "size": 1},
+    "cube": {"type": "cube", "color": "blue", "size": 1},
+    "cylinder": {"type": "cylinder", "color": "green", "size": 1}
+}
+
+def generate_object(request):
+    name = request.GET.get('name', '').lower()
+    obj_data = OBJECTS.get(name)
+    if obj_data:
+        return JsonResponse(obj_data)
+    return JsonResponse({"error": "Object not found"}, status=404)
+
+

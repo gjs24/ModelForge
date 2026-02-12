@@ -5,6 +5,7 @@ urlpatterns = [
     path("generate/", create_model, name="create_model"),
     path("api/models/<int:model_id>/", model_detail_api, name="model_detail_api"),
      path("viewer/<int:model_id>/", model_viewer, name="model_viewer"),
+      path('api/generate-object/', views.generate_object, name='generate_object'),
 ]
 
 

@@ -1,0 +1,10 @@
+{
+    "name": "ghg",
+    "type": "sphere",
+    "dimensions": {
+        "width": "3",
+        "height": "1.9",
+        "depth": "1.2"
+    },
+    "created_at": "2026-02-12T05:51:17.684389+00:00"
+}

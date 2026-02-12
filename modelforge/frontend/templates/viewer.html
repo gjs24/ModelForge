@@ -92,6 +92,15 @@ Position Z <input type="range" id="posZ" min="-10" max="10" step="0.1" value="0"
 <h3>Animation</h3>
 <button id="autoRotateBtn">Auto Rotate: ON</button>
 
+<h3>Reset</h3>
+<button id="resetBtn">Reset Position</button>
+<button id="resetViewBtn">Reset View</button>
+
+<h3>Camera Zoom</h3>
+Zoom Speed <input type="range" id="zoomSpeedSlider" min="0.1" max="5" step="0.1" value="1">
+
+
+
 <h3>Export</h3>
 <button id="screenshotBtn">Take Screenshot</button>
 
@@ -174,6 +183,57 @@ async function loadModel() {
 
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+
+    // --- Configure OrbitControls ---
+controls.enableDamping = true;
+
+// Set initial zoom/scroll speed
+controls.zoomSpeed = 1;  // default slower scroll (was too fast)
+
+// Slider to adjust scroll speed dynamically
+zoomSpeedSlider.oninput = e => {
+    controls.zoomSpeed = e.target.value;
+};
+controls.rotateSpeed = 0.2;   // default 1
+controls.panSpeed = 0.2;      // default 1
+
+
+    // --- Save default values for mesh ---
+const defaultPosition = mesh.position.clone();
+const defaultRotation = mesh.rotation.clone();
+const defaultScale = mesh.scale.clone();
+
+// --- Save default camera/view values ---
+const defaultCameraPosition = camera.position.clone();
+const defaultCameraTarget = controls.target.clone();
+const defaultZoom = camera.zoom; // optional if using orthographic, not needed for perspective
+
+// --- Reset Mesh ---
+resetBtn.onclick = () => {
+    mesh.position.copy(defaultPosition);
+    mesh.rotation.copy(defaultRotation);
+    mesh.scale.copy(defaultScale);
+
+    // Sync sliders
+    posX.value = defaultPosition.x;
+    posY.value = defaultPosition.y;
+    posZ.value = defaultPosition.z;
+
+    rotX.value = THREE.MathUtils.radToDeg(defaultRotation.x);
+    rotY.value = THREE.MathUtils.radToDeg(defaultRotation.y);
+    rotZ.value = THREE.MathUtils.radToDeg(defaultRotation.z);
+
+    scaleSlider.value = defaultScale.x;
+};
+
+// --- Reset Viewport ---
+resetViewBtn.onclick = () => {
+    camera.position.copy(defaultCameraPosition);
+    controls.target.copy(defaultCameraTarget);
+    controls.update();
+};
+
+
 
     // Auto center + fit
     const box = new THREE.Box3().setFromObject(mesh);

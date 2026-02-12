@@ -9,6 +9,12 @@
     <form method="post">
         {% csrf_token %}
 
+<input type="text" id="objectName" placeholder="Enter object name">
+    <button id="generateBtn">Generate</button>
+    <div id="viewer3d"></div>
+
+        
+
         <label>Model Name:</label><br>
         <input type="text" name="name" required><br><br>
 
@@ -31,5 +37,27 @@
 
         <button type="submit">Generate Model</button>
     </form>
+
+    
+    
+    <!-- Your Three.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+    <!-- Your custom JS -->
+    <script>
+        const input = document.getElementById('objectName');
+        const btn = document.getElementById('generateBtn');
+
+        btn.addEventListener('click', () => {
+            const objectName = input.value.trim().toLowerCase();
+            if(objectName) {
+                generateObject(objectName);
+            }
+        });
+
+        // Add your generateObject() function here
+    </script>
+</body>
+
 </body>
 </html>

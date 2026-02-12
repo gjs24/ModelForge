@@ -10,6 +10,8 @@ def generate_json_model(instance):
     Returns a Django ContentFile
     """
 
+    
+
     data = {
         "name": instance.name,
         "type": instance.model_type,
