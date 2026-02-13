@@ -4,27 +4,32 @@
     <title>ModelForge - Create Model</title>
 </head>
 <body>
+
     <h2>Create 3D Model</h2>
 
+    <!-- 🔥 AI Prompt Generator Section -->
+    <h3>Quick Generate (AI Prompt)</h3>
+    <input type="text" id="objectName" placeholder="Enter object (apple, cube)">
+    <button type="button" id="generateBtn">Generate</button>
+
+    <br><br>
+    <hr>
+    <br>
+
+    <!-- 🔥 Manual Model Creator -->
+    <h3>Manual Model Creator</h3>
     <form method="post">
         {% csrf_token %}
-
-<input type="text" id="objectName" placeholder="Enter object name">
-    <button id="generateBtn">Generate</button>
-    <div id="viewer3d"></div>
-
-        
 
         <label>Model Name:</label><br>
         <input type="text" name="name" required><br><br>
 
         <label>Model Type:</label><br>
         <select name="model_type">
-    <option value="cube">Cube</option>
-    <option value="sphere">Sphere</option>
-    <option value="cylinder">Cylinder</option>
-</select>
-
+            <option value="cube">Cube</option>
+            <option value="sphere">Sphere</option>
+            <option value="cylinder">Cylinder</option>
+        </select><br><br>
 
         <label>Width:</label><br>
         <input type="number" step="0.1" name="width" required><br><br>
@@ -38,26 +43,43 @@
         <button type="submit">Generate Model</button>
     </form>
 
-    
-    
-    <!-- Your Three.js library -->
+
+    <!-- Three.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 
-    <!-- Your custom JS -->
+    <!-- 🔥 AI Generate Script -->
     <script>
-        const input = document.getElementById('objectName');
-        const btn = document.getElementById('generateBtn');
+        const input = document.getElementById("objectName");
+        const btn = document.getElementById("generateBtn");
 
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", async () => {
+
             const objectName = input.value.trim().toLowerCase();
-            if(objectName) {
-                generateObject(objectName);
-            }
-        });
 
-        // Add your generateObject() function here
+            if (!objectName) {
+                alert("Enter object name");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/generate-object/?name=${objectName}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Redirect to 3D viewer
+                    window.open(`/viewer/${data.model_id}/`, "_blank");
+
+                } else {
+                    alert("Object not supported");
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Server error");
+            }
+
+        });
     </script>
-</body>
 
 </body>
 </html>

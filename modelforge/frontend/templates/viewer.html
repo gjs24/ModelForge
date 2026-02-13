@@ -120,11 +120,16 @@ Zoom Speed <input type="range" id="zoomSpeedSlider" min="0.1" max="5" step="0.1"
   }
 </script>
 <script type="module">
-import * as THREE from "{% static 'three/three.module.js' %}";
-import { OrbitControls } from "{% static 'three/OrbitControls.js' %}";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
 
 const MODEL_ID = JSON.parse(document.getElementById("model-id-data").textContent);
 const API_URL = `/api/models/${MODEL_ID}/`;
+
+let objects = [], material;
 
 async function loadModel() {
 
@@ -133,10 +138,12 @@ async function loadModel() {
 
     const container = document.getElementById("viewer3d");
 
+    /* ================= SCENE ================= */
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
 
-    const renderer = new THREE.WebGLRenderer({antialias:true});
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
@@ -148,173 +155,436 @@ async function loadModel() {
         2000
     );
 
+    camera.position.set(0, 5, 10);
+
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+
+    /* ================= LIGHT ================= */
 
     const light = new THREE.DirectionalLight(0xffffff,2);
     light.position.set(10,15,10);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff,0.4));
 
-    // Create geometry based on type
-    let geometry;
-    if(data.type.toLowerCase() === "sphere") {
-        geometry = new THREE.SphereGeometry(data.dimensions.width/2,32,32);
-    } else if(data.type.toLowerCase() === "cube") {
-        geometry = new THREE.BoxGeometry(
-            data.dimensions.width,
-            data.dimensions.height,
-            data.dimensions.depth
-        );
+    /* ================= PROMPT PARSER ================= */
+
+    const prompt = (data.name || "").toLowerCase();
+    let color = data.color || "#38bdf8";
+    let scaleFactor = 1;
+
+    if(prompt.includes("red")) color = "#ff0000";
+    if(prompt.includes("green")) color = "#22c55e";
+    if(prompt.includes("blue")) color = "#3b82f6";
+    if(prompt.includes("yellow")) color = "#eab308";
+    if(prompt.includes("purple")) color = "#a855f7";
+
+    if(prompt.includes("big")) scaleFactor = 2;
+    if(prompt.includes("small")) scaleFactor = 0.6;
+
+    /* ================= GEOMETRY ================= */
+
+    if(prompt.includes("apple")) {
+
+        const group = new THREE.Group();
+
+        // Body
+        const bodyGeometry = new THREE.SphereGeometry(2, 64, 64);
+        bodyGeometry.scale(1, 0.9, 1);
+
+       /* ===== PBR MATERIAL ===== */
+
+const baseColor = textureLoader.load("{% static 'textures/basecolor.jpg' %}");
+const normalMap = textureLoader.load("{% static 'textures/normal.jpg' %}");
+const roughnessMap = textureLoader.load("{% static 'textures/roughness.jpg' %}");
+const metalnessMap = textureLoader.load("{% static 'textures/metallic.jpg' %}");
+
+material = new THREE.MeshStandardMaterial({
+    map: baseColor,
+    normalMap: normalMap,
+    roughnessMap: roughnessMap,
+    metalnessMap: metalnessMap
+});
+
+
+        const body = new THREE.Mesh(bodyGeometry, material);
+        group.add(body);
+
+        // Stem
+        const stemGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.6, 16);
+        const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+        const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+        stem.position.y = 2;
+        group.add(stem);
+
+        // Leaf
+        const leafGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+        const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+
+        leaf.scale.set(1.5, 0.2, 1);
+        leaf.rotation.z = Math.PI / 4;
+        leaf.position.set(0.6, 2.1, 0);
+
+        group.add(leaf);
+
+        mesh = group;
+
     } else {
-        geometry = new THREE.CylinderGeometry(
-            data.dimensions.width/2,
-            data.dimensions.width/2,
-            data.dimensions.height,
-            32
-        );
+
+        let geometry;
+        let material;
+
+        if(prompt.includes("sphere"))
+            geometry = new THREE.SphereGeometry(2, 32, 32);
+        else if(prompt.includes("cube"))
+            geometry = new THREE.BoxGeometry(3,3,3);
+        else if(prompt.includes("cylinder"))
+            geometry = new THREE.CylinderGeometry(1.5,1.5,4,32);
+        else
+            geometry = new THREE.BoxGeometry(3,3,3);
+
+        /* ===== PBR MATERIAL ===== */
+
+const baseColor = textureLoader.load("{% static 'textures/basecolor.jpg' %}");
+const normalMap = textureLoader.load("{% static 'textures/normal.jpg' %}");
+const roughnessMap = textureLoader.load("{% static 'textures/roughness.jpg' %}");
+const metalnessMap = textureLoader.load("{% static 'textures/metallic.jpg' %}");
+
+material = new THREE.MeshStandardMaterial({
+    map: baseColor,
+    normalMap: normalMap,
+    roughnessMap: roughnessMap,
+    metalnessMap: metalnessMap
+});
+
+
+        mesh = new THREE.Mesh(geometry, material);
     }
 
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        metalness: 0.5,
-        roughness: 0.3
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    // --- Configure OrbitControls ---
-controls.enableDamping = true;
-
-// Set initial zoom/scroll speed
-controls.zoomSpeed = 1;  // default slower scroll (was too fast)
-
-// Slider to adjust scroll speed dynamically
-zoomSpeedSlider.oninput = e => {
-    controls.zoomSpeed = e.target.value;
-};
-controls.rotateSpeed = 0.2;   // default 1
-controls.panSpeed = 0.2;      // default 1
+    mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    objects.push(mesh);
+scene.add(mesh);
 
 
-    // --- Save default values for mesh ---
-const defaultPosition = mesh.position.clone();
-const defaultRotation = mesh.rotation.clone();
-const defaultScale = mesh.scale.clone();
-
-// --- Save default camera/view values ---
-const defaultCameraPosition = camera.position.clone();
-const defaultCameraTarget = controls.target.clone();
-const defaultZoom = camera.zoom; // optional if using orthographic, not needed for perspective
-
-// --- Reset Mesh ---
-resetBtn.onclick = () => {
-    mesh.position.copy(defaultPosition);
-    mesh.rotation.copy(defaultRotation);
-    mesh.scale.copy(defaultScale);
-
-    // Sync sliders
-    posX.value = defaultPosition.x;
-    posY.value = defaultPosition.y;
-    posZ.value = defaultPosition.z;
-
-    rotX.value = THREE.MathUtils.radToDeg(defaultRotation.x);
-    rotY.value = THREE.MathUtils.radToDeg(defaultRotation.y);
-    rotZ.value = THREE.MathUtils.radToDeg(defaultRotation.z);
-
-    scaleSlider.value = defaultScale.x;
-};
-
-// --- Reset Viewport ---
-resetViewBtn.onclick = () => {
-    camera.position.copy(defaultCameraPosition);
-    controls.target.copy(defaultCameraTarget);
-    controls.update();
-};
+/*span*/
+function addCube() {
+    const geo = new THREE.BoxGeometry(2,2,2);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
+    const cube = new THREE.Mesh(geo, mat);
+    cube.position.x = objects.length * 3;
+    scene.add(cube);
+    objects.push(cube);
+}
 
 
+    /* ================= CAMERA FIT ================= */
 
-    // Auto center + fit
     const box = new THREE.Box3().setFromObject(mesh);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     mesh.position.sub(center);
 
-    // Camera setup with dynamic near/far planes
     const maxDim = Math.max(size.x, size.y, size.z);
-    camera.position.set(0, maxDim, maxDim*2);
-    camera.near = maxDim / 100;
-    camera.far = maxDim * 100;
-    camera.updateProjectionMatrix();
-
-    // OrbitControls limits
+    camera.position.set(0, maxDim, maxDim * 2);
     controls.target.set(0,0,0);
     controls.update();
-    controls.minDistance = maxDim / 10;
-    controls.maxDistance = maxDim * 10;
 
-    // Helpers
-    const grid = new THREE.GridHelper(50,50);
-    scene.add(grid);
-    const axes = new THREE.AxesHelper(5);
-    scene.add(axes);
+    /* ================= UI CONTROLS ================= */
 
-    // UI Controls
-    colorPicker.oninput = e => material.color.set(e.target.value);
-    wireframeToggle.onchange = e => material.wireframe = e.target.checked;
-    metalSlider.oninput = e => material.metalness = e.target.value;
-    roughSlider.oninput = e => material.roughness = e.target.value;
+    colorPicker.oninput = e => material?.color.set(e.target.value);
+    wireframeToggle.onchange = e => {
+        if(material) material.wireframe = e.target.checked;
+    };
+
+    metalSlider.oninput = e => {
+        if(material) material.metalness = e.target.value;
+    };
+
+    roughSlider.oninput = e => {
+        if(material) material.roughness = e.target.value;
+    };
+
     lightSlider.oninput = e => light.intensity = e.target.value;
 
-    gridBtn.onclick = () => grid.visible = !grid.visible;
-    axisBtn.onclick = () => axes.visible = !axes.visible;
+    scaleSlider.oninput = e => {
+        mesh.scale.set(e.target.value, e.target.value, e.target.value);
+    };
 
-    scaleSlider.oninput = e => mesh.scale.set(e.target.value,e.target.value,e.target.value);
     rotX.oninput = e => mesh.rotation.x = THREE.MathUtils.degToRad(e.target.value);
     rotY.oninput = e => mesh.rotation.y = THREE.MathUtils.degToRad(e.target.value);
     rotZ.oninput = e => mesh.rotation.z = THREE.MathUtils.degToRad(e.target.value);
+
     posX.oninput = e => mesh.position.x = e.target.value;
     posY.oninput = e => mesh.position.y = e.target.value;
     posZ.oninput = e => mesh.position.z = e.target.value;
 
-    // Auto rotate
+    /* ================= AUTO ROTATE ================= */
+
     let autoRotate = true;
     autoRotateBtn.onclick = () => {
         autoRotate = !autoRotate;
         autoRotateBtn.innerText = autoRotate ? "Auto Rotate: ON" : "Auto Rotate: OFF";
     };
 
-    // Screenshot
-    screenshotBtn.onclick = () => {
+    /* ================= SCREENSHOT ================= */
+
+    screenshotBtn.onclick = async () => {
+
         renderer.render(scene, camera);
+
+        const imageData = renderer.domElement.toDataURL("image/png");
+
+        // download locally
         const link = document.createElement("a");
         link.download = "model.png";
-        link.href = renderer.domElement.toDataURL();
+        link.href = imageData;
         link.click();
+
+        // send to backend (save one by one)
+        await fetch(`/api/models/${MODEL_ID}/save_screenshot/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: imageData })
+        });
     };
 
-    // Responsive
-    window.addEventListener("resize", () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
+    /* ================= ANIMATION ================= */
 
-    // Animation
     function animate() {
         requestAnimationFrame(animate);
+
         if(autoRotate) mesh.rotation.y += 0.01;
-
-        const degX = THREE.MathUtils.radToDeg(mesh.rotation.x).toFixed(1);
-        const degY = THREE.MathUtils.radToDeg(mesh.rotation.y).toFixed(1);
-        const degZ = THREE.MathUtils.radToDeg(mesh.rotation.z).toFixed(1);
-
-        angleDisplay.innerHTML = `Rotation → X:${degX}° Y:${degY}° Z:${degZ}°`;
 
         controls.update();
         renderer.render(scene, camera);
     }
+
+
+    /* ================= HDR ENVIRONMENT ================= */
+
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+
+new RGBELoader()
+    .load("/static/hdr/studio.hdr", function (texture) {
+
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+
+        scene.environment = envMap;
+        scene.background = envMap;
+
+        texture.dispose();
+        pmremGenerator.dispose();
+    });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+mesh.traverse(child => {
+    if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+    }
+});
+/* ================= REFLECTIVE FLOOR ================= */
+
+const floorGeometry = new THREE.PlaneGeometry(100, 100);
+const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x111111,
+    metalness: 0.6,
+    roughness: 0.2
+});
+
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -2;
+floor.receiveShadow = true;
+
+scene.add(floor);
+
+
+/* ================= DRAG & DROP ================= */
+
+const loader = new GLTFLoader();
+
+window.addEventListener("dragover", e => e.preventDefault());
+
+window.addEventListener("drop", e => {
+    e.preventDefault();
+
+    const file = e.dataTransfer.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+
+        loader.parse(event.target.result, "", function(gltf) {
+
+            const model = gltf.scene;
+            model.traverse(child => {
+                if(child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            scene.add(model);
+            objects.push(model);
+        });
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+    /* ================= HELPERS ================= */
+
+let gridHelper = new THREE.GridHelper(20, 20);
+let axisHelper = new THREE.AxesHelper(5);
+
+let gridVisible = false;
+let axisVisible = false;
+
+gridBtn.onclick = () => {
+    gridVisible = !gridVisible;
+    if (gridVisible) {
+        scene.add(gridHelper);
+    } else {
+        scene.remove(gridHelper);
+    }
+};
+
+axisBtn.onclick = () => {
+    axisVisible = !axisVisible;
+    if (axisVisible) {
+        scene.add(axisHelper);
+    } else {
+        scene.remove(axisHelper);
+    }
+};
+
+
+/* ================= RESET POSITION ================= */
+
+resetBtn.onclick = () => {
+    mesh.position.set(0, 0, 0);
+    mesh.rotation.set(0, 0, 0);
+    mesh.scale.set(1, 1, 1);
+};
+
+
+/* ================= RESET VIEW ================= */
+
+resetViewBtn.onclick = () => {
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    camera.position.set(0, maxDim, maxDim * 2);
+    controls.target.set(0, 0, 0);
+    controls.update();
+};
+
+
+/* ================= ZOOM SPEED ================= */
+
+zoomSpeedSlider.oninput = e => {
+    controls.zoomSpeed = parseFloat(e.target.value);
+};
+/* ================= SNAP ROTATION ================= */
+
+function snapTo90() {
+    const snap = deg => Math.round(deg / 90) * 90;
+
+    const x = THREE.MathUtils.radToDeg(mesh.rotation.x);
+    const y = THREE.MathUtils.radToDeg(mesh.rotation.y);
+    const z = THREE.MathUtils.radToDeg(mesh.rotation.z);
+
+    mesh.rotation.x = THREE.MathUtils.degToRad(snap(x));
+    mesh.rotation.y = THREE.MathUtils.degToRad(snap(y));
+    mesh.rotation.z = THREE.MathUtils.degToRad(snap(z));
+}
+
+// Snap when user releases slider
+rotX.onchange = snapTo90;
+rotY.onchange = snapTo90;
+rotZ.onchange = snapTo90;
+/* ================= SMOOTH CAMERA RESET ================= */
+
+resetViewBtn.onclick = () => {
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    const targetPosition = new THREE.Vector3(0, maxDim, maxDim * 2);
+    const startPosition = camera.position.clone();
+
+    let progress = 0;
+
+    function animateCamera() {
+        progress += 0.03;
+
+        camera.position.lerpVectors(startPosition, targetPosition, progress);
+        controls.target.set(0,0,0);
+        controls.update();
+
+        if(progress < 1) {
+            requestAnimationFrame(animateCamera);
+        }
+    }
+
+    animateCamera();
+};
+/* ================= PROFESSIONAL LIGHTING ================= */
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+dirLight.position.set(10, 15, 10);
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 1);
+fillLight.position.set(-10, 5, -5);
+scene.add(fillLight);
+
+const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
+backLight.position.set(0, 10, -15);
+scene.add(backLight);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambient);
+
+// Control main light intensity
+lightSlider.oninput = e => {
+    dirLight.intensity = e.target.value;
+};
+/* ================= PROFESSIONAL MODE ================= */
+
+window.addEventListener("keydown", (e) => {
+
+    // F = Fullscreen
+    if(e.key === "f") {
+        if (!document.fullscreenElement) {
+            renderer.domElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    // G = Toggle Grid
+    if(e.key === "g") gridBtn.click();
+
+    // A = Toggle Axis
+    if(e.key === "a") axisBtn.click();
+
+    // R = Reset View
+    if(e.key === "r") resetViewBtn.click();
+
+    // S = Snap Rotation
+    if(e.key === "s") snapTo90();
+});
+
+
     animate();
 }
 
