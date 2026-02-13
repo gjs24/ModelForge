@@ -123,13 +123,12 @@ Zoom Speed <input type="range" id="zoomSpeedSlider" min="0.1" max="5" step="0.1"
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 
 const MODEL_ID = JSON.parse(document.getElementById("model-id-data").textContent);
 const API_URL = `/api/models/${MODEL_ID}/`;
 
-let objects = [], material;
+let mesh, material;
 
 async function loadModel() {
 
@@ -192,20 +191,11 @@ async function loadModel() {
         const bodyGeometry = new THREE.SphereGeometry(2, 64, 64);
         bodyGeometry.scale(1, 0.9, 1);
 
-       /* ===== PBR MATERIAL ===== */
-
-const baseColor = textureLoader.load("{% static 'textures/basecolor.jpg' %}");
-const normalMap = textureLoader.load("{% static 'textures/normal.jpg' %}");
-const roughnessMap = textureLoader.load("{% static 'textures/roughness.jpg' %}");
-const metalnessMap = textureLoader.load("{% static 'textures/metallic.jpg' %}");
-
-material = new THREE.MeshStandardMaterial({
-    map: baseColor,
-    normalMap: normalMap,
-    roughnessMap: roughnessMap,
-    metalnessMap: metalnessMap
-});
-
+        material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            metalness: 0.3,
+            roughness: 0.6
+        });
 
         const body = new THREE.Mesh(bodyGeometry, material);
         group.add(body);
@@ -233,7 +223,6 @@ material = new THREE.MeshStandardMaterial({
     } else {
 
         let geometry;
-        let material;
 
         if(prompt.includes("sphere"))
             geometry = new THREE.SphereGeometry(2, 32, 32);
@@ -244,39 +233,17 @@ material = new THREE.MeshStandardMaterial({
         else
             geometry = new THREE.BoxGeometry(3,3,3);
 
-        /* ===== PBR MATERIAL ===== */
-
-const baseColor = textureLoader.load("{% static 'textures/basecolor.jpg' %}");
-const normalMap = textureLoader.load("{% static 'textures/normal.jpg' %}");
-const roughnessMap = textureLoader.load("{% static 'textures/roughness.jpg' %}");
-const metalnessMap = textureLoader.load("{% static 'textures/metallic.jpg' %}");
-
-material = new THREE.MeshStandardMaterial({
-    map: baseColor,
-    normalMap: normalMap,
-    roughnessMap: roughnessMap,
-    metalnessMap: metalnessMap
-});
-
+        material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            metalness: 0.5,
+            roughness: 0.3
+        });
 
         mesh = new THREE.Mesh(geometry, material);
     }
 
     mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    objects.push(mesh);
-scene.add(mesh);
-
-
-/*span*/
-function addCube() {
-    const geo = new THREE.BoxGeometry(2,2,2);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
-    const cube = new THREE.Mesh(geo, mat);
-    cube.position.x = objects.length * 3;
-    scene.add(cube);
-    objects.push(cube);
-}
-
+    scene.add(mesh);
 
     /* ================= CAMERA FIT ================= */
 
@@ -379,63 +346,6 @@ new RGBELoader()
     });
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
-mesh.traverse(child => {
-    if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-    }
-});
-/* ================= REFLECTIVE FLOOR ================= */
-
-const floorGeometry = new THREE.PlaneGeometry(100, 100);
-const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x111111,
-    metalness: 0.6,
-    roughness: 0.2
-});
-
-const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -2;
-floor.receiveShadow = true;
-
-scene.add(floor);
-
-
-/* ================= DRAG & DROP ================= */
-
-const loader = new GLTFLoader();
-
-window.addEventListener("dragover", e => e.preventDefault());
-
-window.addEventListener("drop", e => {
-    e.preventDefault();
-
-    const file = e.dataTransfer.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(event) {
-
-        loader.parse(event.target.result, "", function(gltf) {
-
-            const model = gltf.scene;
-            model.traverse(child => {
-                if(child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-
-            scene.add(model);
-            objects.push(model);
-        });
-    };
-
-    reader.readAsArrayBuffer(file);
-});
 
     /* ================= HELPERS ================= */
 
